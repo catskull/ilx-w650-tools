@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iLX-W650 Wallpaper Patcher</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1c1f24; --muted: #5d6673; --line: #dde1e7;
+    --accent: #1f6feb; --accent-text: #ffffff; --ok: #1a7f37; --warn: #9a6700; --err: #cf222e;
+    --code: #eef1f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216; --panel: #171b21; --text: #e6e9ee; --muted: #9aa4b2; --line: #2a313b;
+      --accent: #4c8dff; --accent-text: #0b0d10; --ok: #3fb950; --warn: #d29922; --err: #f85149;
+      --code: #20262f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 920px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+            padding: 16px 18px; margin-bottom: 16px; }
+  h2 { font-size: 16px; margin: 0 0 10px; display: flex; gap: 8px; align-items: center; }
+  .num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+         background: var(--accent); color: var(--accent-text); font-size: 12px; font-weight: 600; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  label.file { display: inline-block; padding: 7px 12px; border: 1px solid var(--line); border-radius: 6px;
+               cursor: pointer; background: var(--code); }
+  label.file input { display: none; }
+  button { padding: 8px 14px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent);
+           color: var(--accent-text); font-weight: 600; cursor: pointer; font-size: 14px; }
+  button.secondary { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  select, input[type=color] { font-size: 14px; padding: 4px; border-radius: 6px; border: 1px solid var(--line);
+                              background: var(--panel); color: var(--text); }
+  input[type=color] { width: 44px; height: 32px; padding: 2px; }
+  .status { margin-top: 10px; font-size: 14px; }
+  .ok { color: var(--ok); } .err { color: var(--err); } .warn { color: var(--warn); }
+  .previews { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 12px; }
+  figure { margin: 0; }
+  figure canvas { width: 100%; height: auto; aspect-ratio: 800 / 480; display: block; border-radius: 6px;
+                  border: 1px solid var(--line); background: #000; }
+  figcaption { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  progress { width: 100%; height: 10px; margin-top: 10px; }
+  pre.log { background: var(--code); border-radius: 6px; padding: 10px; font-size: 12.5px; white-space: pre-wrap;
+            word-break: break-word; max-height: 220px; overflow: auto; margin: 10px 0 0; }
+  ol, ul { padding-left: 20px; margin: 6px 0; }
+  code { background: var(--code); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  .note { border-left: 3px solid var(--warn); padding: 4px 0 4px 12px; color: var(--muted); font-size: 14px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>iLX-W650 Wallpaper Patcher</h1>
+  <p class="sub">Replaces the home-screen wallpaper in an Alpine iLX-W650 <code>Alpine_SYSTEM.FIR</code>.
+     Everything runs in this page — no files are uploaded anywhere.</p>
+
+  <section>
+    <h2><span class="num">1</span>Firmware</h2>
+    <div class="row">
+      <label class="file">Choose Alpine_SYSTEM.FIR…<input type="file" id="firInput"></label>
+      <span id="firName" class="sub" style="margin:0"></span>
+    </div>
+    <div id="firStatus" class="status"></div>
+    <div id="currentWrap" class="previews hidden">
+      <figure><canvas id="curNormal" width="800" height="480"></canvas><figcaption>Current wallpaper</figcaption></figure>
+      <figure><canvas id="curDim" width="800" height="480"></canvas><figcaption>Current dimmed copy</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">2</span>New wallpaper</h2>
+    <div class="row">
+      <label class="file">Choose image…<input type="file" id="imgInput" accept="image/*"></label>
+      <span class="sub" style="margin:0">or</span>
+      <input type="color" id="colorInput" value="#000000" title="Solid colour">
+      <button class="secondary" id="colorBtn">Use solid colour</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label for="fitSelect">Fit</label>
+      <select id="fitSelect">
+        <option value="cover">Fill screen (crop edges)</option>
+        <option value="contain">Fit inside (pad with colour)</option>
+        <option value="stretch">Stretch to 800×480</option>
+      </select>
+      <span class="sub" style="margin:0">Screen is 800×480. The dimmed copy is generated at 30% brightness, like the stock one.</span>
+    </div>
+    <div id="newWrap" class="previews hidden">
+      <figure><canvas id="newPreview" width="800" height="480"></canvas><figcaption>New wallpaper (source)</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">3</span>Build</h2>
+    <button id="buildBtn" disabled>Build patched firmware</button>
+    <progress id="progress" class="hidden" max="1" value="0"></progress>
+    <pre id="log" class="log hidden"></pre>
+    <div id="resultWrap" class="hidden">
+      <div class="previews">
+        <figure><canvas id="outNormal" width="800" height="480"></canvas><figcaption>As stored in the firmware</figcaption></figure>
+        <figure><canvas id="outDim" width="800" height="480"></canvas><figcaption>Dimmed copy as stored</figcaption></figure>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button id="downloadBtn">Download Alpine_SYSTEM.FIR</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Installing</h2>
+    <ol>
+      <li>Format a USB stick as <b>FAT32</b> (MBR partition table).</li>
+      <li>Create a folder named <code>iLX-W650</code> in its root and put the downloaded <code>Alpine_SYSTEM.FIR</code> inside it — nothing else
+          (no <code>micom.srec</code>, <code>tw8_*.bin</code> or <code>Alpine_BT.dfu</code>).</li>
+      <li>On the head unit, run <b>Firmware Upgrade</b> and keep power stable until it finishes and restarts.</li>
+      <li>Keep your original <code>Alpine_SYSTEM.FIR</code>: flashing it the same way restores stock (there is no version check).</li>
+    </ol>
+    <p class="note">Unofficial modification — use at your own risk. The page checks the firmware build, rebuilds the archive and
+      footer checksum, and decompresses its own output to confirm it matches before offering the download. The boot loader,
+      recovery and <code>pre_main</code> are never changed. If the patched main firmware ever failed to start, the unit could only
+      be restored by reprogramming its serial flash chip, so keep an SPI programmer in mind.</p>
+  </section>
+</main>
+
+<script id="fir-core">
+/*FIR_CORE*/
+</script>
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const W = 800, H = 480;
+  let firReady = false, srcRGBA = null, srcKind = null, srcImage = null, resultFir = null;
+
+  // ---------------------------------------------------------------- worker
+  const WORKER_GLUE = `
+    let state = null;
+    self.onmessage = (e) => {
+      const msg = e.data, logs = [];
+      const log = (m) => self.postMessage({ type: 'log', text: m });
+      try {
+        if (msg.cmd === 'load') {
+          const fir = new Uint8Array(msg.fir);
+          const { main, info } = FirCore.readFirmware(fir, log);
+          state = { fir, main, info };
+          const n = FirCore.renderWallpaper(main, 'normal'), d = FirCore.renderWallpaper(main, 'dimmed');
+          self.postMessage({ type: 'loaded', normal: n.buffer, dimmed: d.buffer }, [n.buffer, d.buffer]);
+        } else if (msg.cmd === 'build') {
+          const patched = FirCore.patchWallpaper(state.main, new Uint8Array(msg.rgba));
+          log('Wallpaper written to both copies (normal + dimmed)');
+          let last = 0;
+          const out = FirCore.buildFirmware(state.fir, patched, state.info, log, (f) => {
+            if (f - last >= 0.02 || f === 1) { last = f; self.postMessage({ type: 'progress', value: f }); }
+          });
+          const n = FirCore.renderWallpaper(patched, 'normal'), d = FirCore.renderWallpaper(patched, 'dimmed');
+          self.postMessage({ type: 'built', fir: out.buffer, normal: n.buffer, dimmed: d.buffer }, [out.buffer, n.buffer, d.buffer]);
+        }
+      } catch (err) {
+        self.postMessage({ type: 'error', text: err.message || String(err) });
+      }
+    };`;
+
+  let worker = null;
+  try {
+    const src = $('fir-core').textContent + '\n' + WORKER_GLUE;
+    worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+  } catch (e) {
+    worker = null;   // fall back to running on the page
+  }
+
+  // Same message protocol when no worker is available.
+  function makeInlineWorker() {
+    const fake = { onmessage: null };
+    const scope = { postMessage: (m) => setTimeout(() => fake.onmessage && fake.onmessage({ data: m }), 0) };
+    const handler = new Function('self', 'FirCore', WORKER_GLUE + '\nreturn self.onmessage;')(scope, window.FirCore);
+    fake.postMessage = (m) => setTimeout(() => handler({ data: m }), 30);
+    return fake;
+  }
+  if (!worker) worker = makeInlineWorker();
+
+  worker.onmessage = (e) => {
+    const m = e.data;
+    if (m.type === 'log') appendLog(m.text);
+    else if (m.type === 'progress') $('progress').value = m.value;
+    else if (m.type === 'loaded') {
+      firReady = true;
+      setStatus('firStatus', 'ok', '✓ Firmware recognised — iLX-W650, main_16.bin build 0x2B5C8407');
+      draw('curNormal', m.normal); draw('curDim', m.dimmed);
+      $('currentWrap').classList.remove('hidden');
+      updateBuildButton();
+    } else if (m.type === 'built') {
+      resultFir = new Uint8Array(m.fir);
+      draw('outNormal', m.normal); draw('outDim', m.dimmed);
+      $('progress').value = 1;
+      $('resultWrap').classList.remove('hidden');
+      appendLog('✓ Ready to download');
+      busy(false);
+    } else if (m.type === 'error') {
+      appendLog('✗ ' + m.text);
+      if (!firReady) setStatus('firStatus', 'err', '✗ ' + m.text);
+      busy(false);
+    }
+  };
+
+  // -------------------------------------------------------------------- UI
+  function setStatus(id, cls, text) { const el = $(id); el.className = 'status ' + cls; el.textContent = text; }
+  function appendLog(t) { const el = $('log'); el.classList.remove('hidden'); el.textContent += t + '\n'; el.scrollTop = el.scrollHeight; }
+  function draw(id, buf) { $(id).getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(buf), W, H), 0, 0); }
+  function busy(on) { $('buildBtn').disabled = on || !(firReady && srcRGBA); $('progress').classList.toggle('hidden', !on && $('progress').value === 0); }
+  function updateBuildButton() { $('buildBtn').disabled = !(firReady && srcRGBA); }
+
+  $('firInput').addEventListener('change', async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    firReady = false; resultFir = null; updateBuildButton();
+    $('firName').textContent = f.name;
+    $('resultWrap').classList.add('hidden'); $('currentWrap').classList.add('hidden');
+    $('log').textContent = '';
+    setStatus('firStatus', '', 'Checking and extracting the main firmware…');
+    const buf = await f.arrayBuffer();
+    worker.postMessage({ cmd: 'load', fir: buf }, [buf]);
+  });
+
+  function renderSource() {
+    const c = $('newPreview'), ctx = c.getContext('2d');
+    const bg = $('colorInput').value, fit = $('fitSelect').value;
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    if (srcKind === 'image' && srcImage) {
+      const iw = srcImage.width, ih = srcImage.height;
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+      if (fit === 'stretch') ctx.drawImage(srcImage, 0, 0, W, H);
+      else {
+        const s = fit === 'cover' ? Math.max(W / iw, H / ih) : Math.min(W / iw, H / ih);
+        const dw = iw * s, dh = ih * s;
+        ctx.drawImage(srcImage, (W - dw) / 2, (H - dh) / 2, dw, dh);
+      }
+    }
+    srcRGBA = ctx.getImageData(0, 0, W, H).data;
+    $('newWrap').classList.remove('hidden');
+    resultFir = null; $('resultWrap').classList.add('hidden');
+    updateBuildButton();
+  }
+
+  $('imgInput').addEventListener('change', async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    try {
+      srcImage = await createImageBitmap(f);
+      srcKind = 'image';
+      renderSource();
+    } catch (err) {
+      alert('Could not read that image: ' + err.message);
+    }
+  });
+  $('colorBtn').addEventListener('click', () => { srcKind = 'color'; srcImage = null; renderSource(); });
+  $('fitSelect').addEventListener('change', () => { if (srcKind) renderSource(); });
+  $('colorInput').addEventListener('input', () => { if (srcKind) renderSource(); });
+
+  $('buildBtn').addEventListener('click', () => {
+    $('log').textContent = ''; $('progress').value = 0; $('progress').classList.remove('hidden');
+    $('resultWrap').classList.add('hidden');
+    busy(true);
+    const copy = new Uint8Array(srcRGBA).buffer;
+    worker.postMessage({ cmd: 'build', rgba: copy }, [copy]);
+  });
+
+  $('downloadBtn').addEventListener('click', () => {
+    if (!resultFir) return;
+    const url = URL.createObjectURL(new Blob([resultFir], { type: 'application/octet-stream' }));
+    const a = Object.assign(document.createElement('a'), { href: url, download: 'Alpine_SYSTEM.FIR' });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  });
+})();
+</script>
+</body>
+</html>

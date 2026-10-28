@@ -1,0 +1,20 @@
+# Firmware and anything derived from it is never committed
+*.FIR
+*.fir
+*.rar
+*.bin
+*.srec
+*.dfu
+extracted/
+out/
+preview_*.png
+wallpaper_*.png
+
+# Python / tooling
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+node_modules/
+.DS_Store
